@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  hello-service:
+    build:
+      context: ./hello-service
+    ports:
+      - "5001:5000"
+    networks:
+      - microservices-net
+    restart: unless-stopped
+    environment:
+      - SERVICE_NAME=hello-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/hello"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  caller-service:
+    build:
+      context: ./caller-service
+    ports:
+      - "5002:5000"
+    networks:
+      - microservices-net
+    restart: unless-stopped
+    environment:
+      - SERVICE_NAME=caller-service
+    depends_on:
+      - hello-service
+
+networks:
+  microservices-net:
+    driver: bridge

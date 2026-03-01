@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-service-deployment
+  labels:
+    app: hello-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hello-service
+  template:
+    metadata:
+      labels:
+        app: hello-service
+    spec:
+      containers:
+      - name: hello-service
+        image: hello-service:latest
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-service
+  labels:
+    app: hello-service
+spec:
+  type: ClusterIP
+  selector:
+    app: hello-service
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caller-service-deployment
+  labels:
+    app: caller-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: caller-service
+  template:
+    metadata:
+      labels:
+        app: caller-service
+    spec:
+      containers:
+      - name: caller-service
+        image: caller-service:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: HELLO_SERVICE_URL
+          value: "http://hello-service:5000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caller-service
+  labels:
+    app: caller-service
+spec:
+  type: ClusterIP
+  selector:
+    app: caller-service
+  ports:
+  - protocol: TCP
+    port: 5000
+    targetPort: 5000
+
+### Explanation:
+
+1. **hello-service Deployment**:
+   - **Replicas**: 3 instances for high availability.
+   - **Labels**: `app: hello-service` for identification and service selection.
+   - **Container**: Runs the `hello-service` image, exposing port 5000.
+
+2. **hello-service Service**:
+   - **Type**: ClusterIP, making it accessible within the cluster.
+   - **Selector**: Matches pods with `app: hello-service`.
+   - **Ports**: Exposes port 5000.
+
+3. **caller-service Deployment**:
+   - **Replicas**: 3 instances for high availability.
+   - **Labels**: `app: caller-service` for identification and service selection.
+   - **Container**: Runs the `caller-service` image, exposing port 5000.
+   - **Environment Variable**: `HELLO_SERVICE_URL` is set to `http://hello-service:5000` to reach the `hello-service` via its DNS name.
+
+4. **caller-service Service**:
+   - **Type**: ClusterIP, making it accessible within the cluster.
+   - **Selector**: Matches pods with `app: caller-service`.
+   - **Ports**: Exposes port 5000.
+
+This setup ensures that the `caller-service` can communicate with the `hello-service` using the internal DNS name `hello-service`. Each service is exposed on port 5000, and the deployments are set to run three replicas for redundancy and load balancing. The use of labels and selectors ensures that services route traffic to the correct pods.
